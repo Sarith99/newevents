@@ -1,0 +1,74 @@
+# ---- BLUE deployment (currently live) ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-blue
+  namespace: newevent
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: blue
+    spec:
+      containers:
+        - name: frontend
+          image: sarith99/newevent-frontend:blue
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+# ---- GREEN deployment (idle standby) ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-green
+  namespace: newevent
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+      version: green
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: green
+    spec:
+      containers:
+        - name: frontend
+          image: sarith99/newevent-frontend:green
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+# ---- SERVICE (the switch) ----
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+    version: blue      # <-- THIS LINE is the switch. Change to "green" to flip traffic.
+  ports:
+    - port: 80
+      targetPort: 80
