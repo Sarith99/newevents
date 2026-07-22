@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: newevent
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: newevent.local
+      http:
+        paths:
+          - path: /api/events
+            pathType: Prefix
+            backend:
+              service:
+                name: event-service
+                port:
+                  number: 80
+          - path: /api/programs
+            pathType: Prefix
+            backend:
+              service:
+                name: program-service
+                port:
+                  number: 80
+          - path: /api/register
+            pathType: Prefix
+            backend:
+              service:
+                name: registration-service
+                port:
+                  number: 80
+          - path: /api/track
+            pathType: Prefix
+            backend:
+              service:
+                name: analytics-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+    - host: analytics.newevent.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: metabase
+                port:
+                  number: 3000

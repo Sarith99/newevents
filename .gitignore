@@ -1,0 +1,15 @@
+# .NET build output
+bin/
+obj/
+
+# IDE / editor files
+.vs/
+.vscode/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Local secrets / environment (safety net)
+*.env
+secrets.*

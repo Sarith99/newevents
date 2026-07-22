@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: metabase-data
+  namespace: newevent
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metabase
+  namespace: newevent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metabase
+  template:
+    metadata:
+      labels:
+        app: metabase
+    spec:
+      initContainers:
+        - name: fetch-clickhouse-driver
+          image: curlimages/curl:8.8.0
+          command:
+            - sh
+            - -c
+            - "curl -L -o /plugins/clickhouse.metabase-driver.jar https://github.com/ClickHouse/metabase-clickhouse-driver/releases/download/1.50.4/clickhouse.metabase-driver.jar"
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins
+      containers:
+        - name: metabase
+          image: metabase/metabase:v0.50.21
+          ports:
+            - containerPort: 3000
+          env:
+            - name: MB_PLUGINS_DIR
+              value: /plugins
+            - name: MB_DB_TYPE
+              value: h2
+            - name: MB_DB_FILE
+              value: /metabase-data/metabase.db
+          volumeMounts:
+            - name: plugins
+              mountPath: /plugins
+            - name: data
+              mountPath: /metabase-data
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1536Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 150
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 15
+      volumes:
+        - name: plugins
+          emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: metabase-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metabase
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector:
+    app: metabase
+  ports:
+    - port: 3000
+      targetPort: 3000
