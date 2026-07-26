@@ -1,0 +1,70 @@
+# ---- BLUE deployment (live) ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-blue
+  namespace: newevent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-bg
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: frontend-bg
+        version: blue
+    spec:
+      containers:
+        - name: frontend
+          image: sarithrgu/newevent-frontend:blue
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "100m", memory: "64Mi" }
+---
+# ---- GREEN deployment (idle standby) ----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-green
+  namespace: newevent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-bg
+      version: green
+  template:
+    metadata:
+      labels:
+        app: frontend-bg
+        version: green
+    spec:
+      containers:
+        - name: frontend
+          image: sarithrgu/newevent-frontend:green
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "100m", memory: "64Mi" }
+---
+# ---- SERVICE (the switch) ----
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-bg
+  namespace: newevent
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend-bg
+    version: blue      # <-- the switch: change to "green" to flip traffic
+  ports:
+    - port: 80
+      targetPort: 80

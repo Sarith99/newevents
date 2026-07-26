@@ -1,0 +1,173 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: newevent
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels: { app: frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: sarithrgu/newevent-frontend:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 80 }]
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "100m", memory: "64Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector: { app: frontend }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-service
+  namespace: newevent
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: event-service }
+  template:
+    metadata:
+      labels: { app: event-service }
+    spec:
+      containers:
+        - name: event-service
+          image: sarithrgu/event-service:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8080 }]
+          env:
+            - name: ConnectionStrings__EventDb
+              valueFrom: { secretKeyRef: { name: event-db-secret, key: ConnectionStrings__EventDb } }
+          resources:
+            requests: { cpu: "25m", memory: "96Mi" }
+            limits: { cpu: "200m", memory: "256Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-service
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector: { app: event-service }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: program-service
+  namespace: newevent
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: program-service }
+  template:
+    metadata:
+      labels: { app: program-service }
+    spec:
+      containers:
+        - name: program-service
+          image: sarithrgu/program-service:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8080 }]
+          env:
+            - name: ConnectionStrings__ProgramDb
+              valueFrom: { secretKeyRef: { name: program-db-secret, key: ConnectionStrings__ProgramDb } }
+          resources:
+            requests: { cpu: "25m", memory: "96Mi" }
+            limits: { cpu: "200m", memory: "256Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: program-service
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector: { app: program-service }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registration-service
+  namespace: newevent
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: registration-service }
+  template:
+    metadata:
+      labels: { app: registration-service }
+    spec:
+      containers:
+        - name: registration-service
+          image: sarithrgu/registration-service:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8080 }]
+          env:
+            - name: ConnectionStrings__RegistrationDb
+              valueFrom: { secretKeyRef: { name: registration-db-secret, key: ConnectionStrings__RegistrationDb } }
+            - name: EventServiceUrl
+              value: "http://event-service"
+          resources:
+            requests: { cpu: "25m", memory: "96Mi" }
+            limits: { cpu: "200m", memory: "256Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registration-service
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector: { app: registration-service }
+  ports: [{ port: 80, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: newevent
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: analytics-service }
+  template:
+    metadata:
+      labels: { app: analytics-service }
+    spec:
+      containers:
+        - name: analytics-service
+          image: sarithrgu/analytics-service:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8080 }]
+          env:
+            - name: ClickHouseUrl
+              value: "http://clickhouse:8123"
+          resources:
+            requests: { cpu: "25m", memory: "64Mi" }
+            limits: { cpu: "150m", memory: "128Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: newevent
+spec:
+  type: ClusterIP
+  selector: { app: analytics-service }
+  ports: [{ port: 80, targetPort: 8080 }]
